@@ -1,0 +1,8 @@
+[package]
+name = "sing"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+macroquad = "0.4.14"
+mlua = { version = "0.11.6", features = ["lua55", "vendored"] }
