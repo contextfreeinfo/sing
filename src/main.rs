@@ -27,8 +27,8 @@ async fn main() -> Result<()> {
     let size = Vec2::new(40.0, 40.0);
     let mut dir = Vec2::new(1.0, 1.0);
     let speed = 400.0;
-    let screen_size = Vec2::new(screen_width(), screen_height());
     loop {
+        let screen_size = Vec2::new(screen_width(), screen_height());
         clear_background(BLUE);
         draw_rectangle(pos.x, pos.y, size.x, size.y, WHITE);
         let end = pos + size;
