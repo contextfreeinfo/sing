@@ -7,3 +7,4 @@ Possible names:
 - Songsys (vs Singsys???)
 - Songware
 - Tryform
+- Trysong
