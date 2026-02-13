@@ -13,7 +13,11 @@ struct Args {
 fn main() -> Result<()> {
     let args = argh::from_env::<Args>();
 
-    let lua = Lua::new_with(StdLib::ALL_SAFE, mlua::LuaOptions::default())?;
+    let lua = Lua::new_with(
+        // TODO Disable globals also!!!
+        StdLib::BIT | StdLib::MATH | StdLib::STRING | StdLib::TABLE,
+        mlua::LuaOptions::default(),
+    )?;
     let sys = lua.create_table()?;
     sys.set(
         "clear",
