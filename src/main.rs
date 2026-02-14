@@ -19,13 +19,6 @@ fn main() -> Result<()> {
         mlua::LuaOptions::default(),
     )?;
     let sys = lua.create_table()?;
-    sys.set(
-        "clear",
-        lua.create_function(|_, rgb: u32| {
-            clear_background(Color::from_hex(rgb));
-            Ok(())
-        })?,
-    )?;
     lua.globals().set("sys", sys)?;
 
     let script = fs::read_to_string(&args.script)?;
@@ -51,9 +44,10 @@ async fn run_loop(script: mlua::Table) -> Result<()> {
     let size = Vec2::new(40.0, 40.0);
     let mut dir = Vec2::new(1.0, 1.0);
     let speed = 400.0;
+    let surf = Surface;
     loop {
         let screen_size = Vec2::new(screen_width(), screen_height());
-        draw.call::<()>(())?;
+        draw.call::<()>(surf)?;
         draw_rectangle(pos.x, pos.y, size.x, size.y, WHITE);
         let end = pos + size;
         if pos.x < 0.0 {
@@ -69,5 +63,17 @@ async fn run_loop(script: mlua::Table) -> Result<()> {
         pos += dir * speed * get_frame_time();
         draw_text(&format!("FPS: {}", get_fps()), 200.0, 150.0, 80.0, YELLOW);
         next_frame().await
+    }
+}
+
+#[derive(Clone, Copy)]
+struct Surface;
+
+impl mlua::UserData for Surface {
+    fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
+        methods.add_method("clear", |_lua, _this, rgb: u32| {
+            clear_background(Color::from_hex(rgb));
+            Ok(())
+        });
     }
 }
