@@ -15,10 +15,10 @@ fn main() -> Result<()> {
 
     let lua = Lua::new_with(
         // TODO Disable globals also!!!
-        StdLib::BIT | StdLib::COROUTINE | StdLib::MATH | StdLib::STRING | StdLib::TABLE,
+        // TODO How to error on setting any globals???
+        StdLib::BIT | StdLib::MATH | StdLib::STRING | StdLib::TABLE,
         mlua::LuaOptions::default(),
     )?;
-    lua.sandbox(true)?;
     let sys = lua.create_table()?;
     lua.globals().set("sys", sys)?;
 
