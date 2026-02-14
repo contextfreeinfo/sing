@@ -29,9 +29,7 @@ fn main() -> Result<()> {
         Conf {
             fullscreen: true,
             platform: miniquad::conf::Platform {
-                linux_x11_gl: miniquad::conf::LinuxX11Gl::EGLWithGLXFallback,
                 webgl_version: miniquad::conf::WebGLVersion::WebGL2,
-                swap_interval: Some(1),
                 // blocking_event_loop: true,
                 // linux_wm_class: "...",
                 ..Default::default()
