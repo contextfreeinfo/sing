@@ -4,7 +4,7 @@ local mod = {}
 -- local file = io.open("hi.txt", "w")
 -- local a = coroutine.running()
 
----@class State
+---@class Sprite
 ---@field dir_x number
 ---@field dir_y number
 ---@field pos_x number
@@ -13,38 +13,49 @@ local mod = {}
 ---@field size_y number
 ---@field speed number
 
+---@class State
+---@field sprites Sprite[]
+
 ---@return State
 function mod.init()
+    local sprites = {}
+    for _ = 1, 10000 do
+        table.insert(sprites, {
+            dir_x  = math.random(-1, 1),   -- TODO Just -1 or 1
+            dir_y  = math.random(-1, 1),
+            pos_x  = math.random(0, 1920), -- TODO Use hub for size?
+            pos_y  = math.random(0, 1080),
+            size_x = 40,
+            size_y = 40,
+            speed  = math.random(100, 500),
+        })
+    end
     return {
-        dir_x = 1,
-        dir_y = 1,
-        pos_x = 0,
-        pos_y = 0,
-        size_x = 40,
-        size_y = 40,
-        speed = 400,
+        sprites = sprites
     }
 end
 
 ---@param hub sys.Hub
 ---@param state State
 function mod.update(hub, state)
-    -- Move
-    local move = hub.frame_time * state.speed
-    state.pos_x = state.pos_x + move * state.dir_x
-    state.pos_y = state.pos_y + move * state.dir_y
-    -- Check collision
-    local x1 = state.pos_x + state.size_x
-    local y1 = state.pos_y + state.size_y
-    if state.pos_x < 0 then
-        state.dir_x = 1
-    elseif x1 > hub.screen_size_x then
-        state.dir_x = -1
-    end
-    if state.pos_y < 0 then
-        state.dir_y = 1
-    elseif y1 > hub.screen_size_y then
-        state.dir_y = -1
+    for _, sprite in ipairs(state.sprites) do
+        -- Move
+        local move = hub.frame_time * sprite.speed
+        sprite.pos_x = sprite.pos_x + move * sprite.dir_x
+        sprite.pos_y = sprite.pos_y + move * sprite.dir_y
+        -- Check collision
+        local x1 = sprite.pos_x + sprite.size_x
+        local y1 = sprite.pos_y + sprite.size_y
+        if sprite.pos_x < 0 then
+            sprite.dir_x = 1
+        elseif x1 > hub.screen_size_x then
+            sprite.dir_x = -1
+        end
+        if sprite.pos_y < 0 then
+            sprite.dir_y = 1
+        elseif y1 > hub.screen_size_y then
+            sprite.dir_y = -1
+        end
     end
 end
 
@@ -52,9 +63,11 @@ end
 ---@param state State
 function mod.draw(surf, state)
     surf:clear(0x104060)
-    local x1 = state.pos_x + state.size_x
-    local y1 = state.pos_y + state.size_y
-    surf:rect(state.pos_x, state.pos_y, x1, y1, 0xffffff)
+    for _, sprite in ipairs(state.sprites) do
+        local x1 = sprite.pos_x + sprite.size_x
+        local y1 = sprite.pos_y + sprite.size_y
+        surf:rect(sprite.pos_x, sprite.pos_y, x1, y1, 0xffffff)
+    end
 end
 
 return mod

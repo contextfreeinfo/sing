@@ -6,4 +6,4 @@ edition = "2024"
 [dependencies]
 argh = "0.1.14"
 macroquad = "0.4.14"
-mlua = { version = "0.11.6", features = ["luajit52", "vendored"] }
+mlua = { version = "0.11.6", features = ["lua55", "vendored"] }

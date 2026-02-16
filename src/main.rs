@@ -16,7 +16,7 @@ fn main() -> Result<()> {
     let lua = Lua::new_with(
         // TODO Disable globals also!!!
         // TODO How to error on setting any globals???
-        StdLib::BIT | StdLib::MATH | StdLib::STRING | StdLib::TABLE,
+        StdLib::MATH | StdLib::STRING | StdLib::TABLE,
         mlua::LuaOptions::default(),
     )?;
     let sys = lua.create_table()?;
@@ -55,13 +55,8 @@ async fn run_loop(script: mlua::Table, hub: AnyUserData) -> Result<()> {
         .transpose()?;
     let update: Option<mlua::Function> = script.get("update").ok();
     let draw: Option<mlua::Function> = script.get("draw").ok();
-    let mut pos = Vec2::ZERO;
-    let size = Vec2::new(40.0, 40.0);
-    let mut dir = Vec2::new(1.0, 1.0);
-    let speed = 400.0;
     let surf = Surf;
     loop {
-        let screen_size = Vec2::new(screen_width(), screen_height());
         hub.borrow_mut::<Hub>().map(|mut hub| {
             hub.frame_time = get_frame_time();
             hub.screen_size_x = screen_width();
@@ -73,19 +68,6 @@ async fn run_loop(script: mlua::Table, hub: AnyUserData) -> Result<()> {
         if let Some(draw) = &draw {
             draw.call::<()>((surf, state.clone()))?;
         }
-        // draw_rectangle(pos.x, pos.y, size.x, size.y, WHITE);
-        let end = pos + size;
-        if pos.x < 0.0 {
-            dir.x = 1.0;
-        } else if end.x > screen_size.x {
-            dir.x = -1.0;
-        }
-        if pos.y < 0.0 {
-            dir.y = 1.0;
-        } else if end.y > screen_size.y {
-            dir.y = -1.0;
-        }
-        pos += dir * speed * get_frame_time();
         draw_text(&format!("FPS: {}", get_fps()), 200.0, 150.0, 80.0, YELLOW);
         next_frame().await
     }
