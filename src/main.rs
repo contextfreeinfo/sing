@@ -51,9 +51,10 @@ fn main() -> Result<()> {
 
 async fn run_loop(script: mlua::Table, hub: AnyUserData) -> Result<()> {
     let init: Option<mlua::Function> = script.get("init").ok();
-    let state = init
-        .map(|init| init.call::<mlua::Value>(hub.clone()))
-        .transpose()?;
+    let state = match init {
+        Some(init) => Some(init.call_async::<mlua::Value>(hub.clone()).await?),
+        None => None,
+    };
     let update: Option<mlua::Function> = script.get("update").ok();
     let draw: Option<mlua::Function> = script.get("draw").ok();
     let surf = Surf;
