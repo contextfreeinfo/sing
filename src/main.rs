@@ -51,10 +51,10 @@ fn main() -> Result<()> {
 
 async fn run_loop(script: mlua::Table, hub: AnyUserData) -> Result<()> {
     let init: Option<mlua::Function> = script.get("init").ok();
-    let state = match init {
-        Some(init) => Some(init.call_async::<mlua::Value>(hub.clone()).await?),
-        None => None,
-    };
+    // The init function itself should be sync.
+    let state = init
+        .map(|init| init.call::<mlua::Value>(hub.clone()))
+        .transpose()?;
     let update: Option<mlua::Function> = script.get("update").ok();
     let draw: Option<mlua::Function> = script.get("draw").ok();
     let surf = Surf;
@@ -94,11 +94,18 @@ impl mlua::UserData for Hub {
         methods.add_async_method("font", |_lua, this, resource: mlua::String| async move {
             let path = get_safe_path(&this.path, &resource.to_str().unwrap())
                 .map_err(|e| mlua::Error::RuntimeError(e))?;
-            let path_str = path.to_string_lossy();
-            let font = load_ttf_font(&path_str)
-                .await
-                .map_err(|e| mlua::Error::RuntimeError(format!("Failed to load font: {:?}", e)))?;
-            Ok(path)
+            macroquad::experimental::coroutines::start_coroutine(async move {
+                let path_str = path.to_string_lossy();
+                match load_ttf_font(&path_str).await {
+                    Ok(font) => println!("Loaded: {path_str}"),
+                    Err(err) => println!("Failed {path_str}: {err:?}"),
+                }
+                // .await
+                // .map_err(|e| mlua::Error::RuntimeError(format!("Failed to load font: {:?}", e)))?;
+            });
+            // Ok(path)
+            // TODO Return some handle or something???
+            Ok(())
         });
     }
 }
