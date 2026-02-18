@@ -2,7 +2,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use macroquad::prelude::*;
-use mlua::prelude::*;
 use mlua::{AnyUserData, Lua, Result, StdLib};
 
 #[derive(argh::FromArgs)]
@@ -91,13 +90,20 @@ impl mlua::UserData for Hub {
     }
 
     fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
-        methods.add_method("font", |_lua, this, resource: mlua::String| {
-            // get_safe_path(&this.path, resource.to_str())
-            //     .map_err(|e| mlua::Error::RuntimeError(e))?;
-            Ok(())
+        methods.add_async_method("font", |_lua, this, resource: mlua::String| async move {
+            let path = get_safe_path(&this.path, &resource.to_str().unwrap())
+                .map_err(|e| mlua::Error::RuntimeError(e))?;
+            let path_str = path.to_string_lossy();
+            let font = load_ttf_font(&path_str)
+                .await
+                .map_err(|e| mlua::Error::RuntimeError(format!("Failed to load font: {:?}", e)))?;
+            Ok(path)
         });
     }
 }
+
+// struct MqFont(pub Font);
+// impl mlua::UserData for MqFont {}
 
 #[derive(Clone, Copy)]
 struct Surf;
@@ -123,38 +129,37 @@ impl mlua::UserData for Surf {
     }
 }
 
-// /// Safely joins a relative resource path to a base path, ensuring it stays 
-// /// within the base path's parent directory.
-// fn get_safe_path(base_root: &str, resource_request: &str) -> Result<PathBuf> {
-//     let base = Path::new(base_root);
-    
-//     // 1. Get the directory we are "locked" into
-//     let jail_dir = if base.is_dir() {
-//         base.to_path_buf()
-//     } else {
-//         base.parent()
-//             .map(|p| p.to_path_buf())
-//             .unwrap_or_else(|| PathBuf::from("."))
-//     };
-
-//     // 2. Prevent absolute path hijacking
-//     let req_path = Path::new(resource_request);
-//     if req_path.is_absolute() {
-//         return Err("Absolute paths are forbidden".to_string());
-//     }
-
-//     // 3. Join and Canonicalize
-//     // Note: canonicalize() requires the file to exist on disk.
-//     let full_path = jail_dir.join(req_path);
-//     let canonical_jail = jail_dir.canonicalize()
-//         .map_err(|e| format!("Base path invalid: {}", e))?;
-//     let canonical_target = full_path.canonicalize()
-//         .map_err(|e| format!("Resource not found or invalid: {}", e))?;
-
-//     // 4. Boundary Check
-//     if canonical_target.starts_with(&canonical_jail) {
-//         Ok(canonical_target)
-//     } else {
-//         Err("Directory traversal attempt detected".to_string())
-//     }
-// }
+/// Safely joins a relative resource path to a base path, ensuring it stays
+/// within the base path's parent directory.
+/// TODO Require resource to start with "./"?
+fn get_safe_path(base_path: &str, resource: &str) -> std::result::Result<PathBuf, String> {
+    let base = Path::new(base_path);
+    // Get the directory we are "locked" into
+    let jail_dir = if base.is_dir() {
+        base.to_path_buf()
+    } else {
+        base.parent()
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|| PathBuf::from("."))
+    };
+    // Prevent absolute path hijacking
+    let req_path = Path::new(resource);
+    if req_path.is_absolute() {
+        return Err("Absolute paths are forbidden".to_string());
+    }
+    // Join and Canonicalize
+    // Note: canonicalize() requires the file to exist on disk.
+    let full_path = jail_dir.join(req_path);
+    let canonical_jail = jail_dir
+        .canonicalize()
+        .map_err(|e| format!("Base path invalid: {}", e))?;
+    let canonical_target = full_path
+        .canonicalize()
+        .map_err(|e| format!("Resource not found or invalid: {}", e))?;
+    // Boundary Check
+    if canonical_target.starts_with(&canonical_jail) {
+        Ok(canonical_target)
+    } else {
+        Err("Directory traversal attempt detected".to_string())
+    }
+}
