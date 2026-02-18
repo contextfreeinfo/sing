@@ -14,11 +14,10 @@ fn main() -> Result<()> {
     let args = argh::from_env::<Args>();
 
     let lua = Lua::new_with(
-        // TODO Disable globals also!!!
-        // TODO How to error on setting any globals???
-        StdLib::MATH | StdLib::STRING | StdLib::TABLE,
+        StdLib::BIT | StdLib::COROUTINE | StdLib::MATH | StdLib::STRING | StdLib::TABLE,
         mlua::LuaOptions::default(),
     )?;
+    lua.sandbox(true)?;
     let sys = lua.create_table()?;
     lua.globals().set("sys", sys)?;
 
@@ -94,6 +93,7 @@ struct Surf;
 impl mlua::UserData for Surf {
     fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
         methods.add_method("clear", |_lua, _this, rgb: u32| {
+            // TODO Get target from `this`.
             clear_background(Color::from_hex(rgb));
             Ok(())
         });

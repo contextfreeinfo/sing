@@ -19,7 +19,7 @@ local mod = {}
 ---@return State
 function mod.init()
     local sprites = {}
-    for _ = 1, 10000 do
+    for _ = 1, 1000 do
         table.insert(sprites, {
             dir_x  = math.random(-1, 1),   -- TODO Just -1 or 1
             dir_y  = math.random(-1, 1),
@@ -66,7 +66,7 @@ function mod.draw(surf, state)
     for _, sprite in ipairs(state.sprites) do
         local x1 = sprite.pos_x + sprite.size_x
         local y1 = sprite.pos_y + sprite.size_y
-        surf:rect(sprite.pos_x, sprite.pos_y, x1, y1, 0xffffff)
+        surf:rect(sprite.pos_x, sprite.pos_y, x1, y1, 0x205080)
     end
 end
 
