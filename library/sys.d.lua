@@ -4,9 +4,15 @@
 ---@class sys
 sys = {}
 
+
+---===
 --- Access to system input, output, and state
 ---@class sys.Hub
 sys.Hub = {}
+
+--- Load a font from a resource reference
+--- @param resource string | sys.Resource
+function sys.Hub:font(resource) end
 
 --- The delta time for the current frame
 sys.Hub.frame_time = 0
@@ -16,9 +22,21 @@ sys.Hub.screen_size_x = 0
 
 --- Screen height in pixels
 sys.Hub.screen_size_y = 0
+---===
+
+
+---===
+--- Abstract resource handle
+--- TODO This could allow for prep. Good idea?
+--- @class sys.Resource
+sys.Resource = {}
+---===
+
 
 ---@alias sys.Rgb integer # A 24-bit RGB color (e.g., 0xFF0000)
 
+
+---===
 --- Surface used for drawing graphics
 ---@class sys.Surf
 sys.Surf = {}
@@ -34,3 +52,4 @@ function sys.Surf:clear(rgb) end
 --- @param y1 number
 --- @param rgb sys.Rgb
 function sys.Surf:rect(x0, y0, x1, y1, rgb) end
+---===

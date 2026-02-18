@@ -1,6 +1,8 @@
 use std::fs;
+use std::path::{Path, PathBuf};
 
 use macroquad::prelude::*;
+use mlua::prelude::*;
 use mlua::{AnyUserData, Lua, Result, StdLib};
 
 #[derive(argh::FromArgs)]
@@ -24,6 +26,7 @@ fn main() -> Result<()> {
     let script = fs::read_to_string(&args.script)?;
     let script: mlua::Table = lua.load(script).eval()?;
     let hub = lua.create_userdata(Hub {
+        path: args.script,
         ..Default::default()
     })?;
 
@@ -75,6 +78,7 @@ async fn run_loop(script: mlua::Table, hub: AnyUserData) -> Result<()> {
 #[derive(Default)]
 struct Hub {
     pub frame_time: f32,
+    pub path: String,
     pub screen_size_x: f32,
     pub screen_size_y: f32,
 }
@@ -84,6 +88,14 @@ impl mlua::UserData for Hub {
         fields.add_field_method_get("frame_time", |_, this| Ok(this.frame_time));
         fields.add_field_method_get("screen_size_x", |_, this| Ok(this.screen_size_x));
         fields.add_field_method_get("screen_size_y", |_, this| Ok(this.screen_size_y));
+    }
+
+    fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
+        methods.add_method("font", |_lua, this, resource: mlua::String| {
+            // get_safe_path(&this.path, resource.to_str())
+            //     .map_err(|e| mlua::Error::RuntimeError(e))?;
+            Ok(())
+        });
     }
 }
 
@@ -110,3 +122,39 @@ impl mlua::UserData for Surf {
         );
     }
 }
+
+// /// Safely joins a relative resource path to a base path, ensuring it stays 
+// /// within the base path's parent directory.
+// fn get_safe_path(base_root: &str, resource_request: &str) -> Result<PathBuf> {
+//     let base = Path::new(base_root);
+    
+//     // 1. Get the directory we are "locked" into
+//     let jail_dir = if base.is_dir() {
+//         base.to_path_buf()
+//     } else {
+//         base.parent()
+//             .map(|p| p.to_path_buf())
+//             .unwrap_or_else(|| PathBuf::from("."))
+//     };
+
+//     // 2. Prevent absolute path hijacking
+//     let req_path = Path::new(resource_request);
+//     if req_path.is_absolute() {
+//         return Err("Absolute paths are forbidden".to_string());
+//     }
+
+//     // 3. Join and Canonicalize
+//     // Note: canonicalize() requires the file to exist on disk.
+//     let full_path = jail_dir.join(req_path);
+//     let canonical_jail = jail_dir.canonicalize()
+//         .map_err(|e| format!("Base path invalid: {}", e))?;
+//     let canonical_target = full_path.canonicalize()
+//         .map_err(|e| format!("Resource not found or invalid: {}", e))?;
+
+//     // 4. Boundary Check
+//     if canonical_target.starts_with(&canonical_jail) {
+//         Ok(canonical_target)
+//     } else {
+//         Err("Directory traversal attempt detected".to_string())
+//     }
+// }
