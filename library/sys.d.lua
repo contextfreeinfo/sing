@@ -1,47 +1,72 @@
 ---@meta
 
---- Global system namespace
+
+--- Global system namespace.
 ---@class sys
 sys = {}
+---===
 
 
 ---===
---- Font handle
+--- Sized font, where each costs vram. Limit how many you make as well as the
+--- size of each.
 ---@class sys.Font
---- Whether the font is properly loaded
----@field ready boolean
---- The error message if any
----@field error? string
+--- The face this font comes from.
+---@field face sys.FontFace
 sys.Font = {}
+
+--- Measure sizes for the given text.
+--- TODO Throw if not ready?
+---@param text string
+---@return number size_x
+---@return number size_y
+---@return number baseline_y
+function sys.Font:measure(text) end
 ---===
 
 
 ---===
---- Access to system input, output, and state
+--- Font face, which is independent of size.
+---@class sys.FontFace
+--- Whether the font face is properly loaded.
+---@field ready boolean
+--- The error message if any.
+---@field error? string
+sys.FontFace = {}
+
+--- Prepare a font at a particular size. Each costs vram. Bigger costs more.
+--- Limit how many you make as well as the size. If the face isn't ready, the
+--- font also won't be.
+--- TODO Preconfigure which sizes to use for which sizes on screen?
+--- TODO Different atlas per size would be nice.
+---@param size number
+---@return sys.Font
+function sys.FontFace:font(size) end
+---===
+
+
+---===
+--- Access to system input, output, and state.
 ---@class sys.Hub
 sys.Hub = {}
 
---- Load a font from a resource reference
----@param resource string | sys.Resource
----@return sys.Font
-function sys.Hub:font(resource) end
+--- Load a font from a relative path.
+--- TODO Some way to manage multiface for different code ranges?
+--- TODO Size ratios for different faces in a multiface?
+---@param path string
+---@return sys.FontFace
+function sys.Hub:font_face(path) end
 
---- The delta time for the current frame
+--- Define a font face and scale.
+
+--- The delta time for the current frame.
 sys.Hub.frame_time = 0
 
---- Screen width in pixels
+--- Screen width in pixels.
 sys.Hub.screen_size_x = 0
 
---- Screen height in pixels
+--- Screen height in pixels.
 sys.Hub.screen_size_y = 0
----===
-
-
----===
---- Abstract resource handle
---- TODO This could allow for prep. Good idea?
----@class sys.Resource
-sys.Resource = {}
 ---===
 
 
@@ -49,15 +74,15 @@ sys.Resource = {}
 
 
 ---===
---- Surface used for drawing graphics
+--- Surface used for drawing graphics.
 ---@class sys.Surf
 sys.Surf = {}
 
---- Clear the screen with a specific color
+--- Clear the screen with a specific color.
 ---@param rgb sys.Rgb
 function sys.Surf:clear(rgb) end
 
---- Fill a rectangle
+--- Fill a rectangle.
 ---@param x0 number
 ---@param y0 number
 ---@param x1 number
@@ -65,14 +90,14 @@ function sys.Surf:clear(rgb) end
 ---@param rgb sys.Rgb
 function sys.Surf:rect(x0, y0, x1, y1, rgb) end
 
---- Fill a rectangle
+--- Draw text to the screen.
 ---@param text string
 ---@param x number
 ---@param y number
 --- TODO Put all the below in some TextOptions table?
----@param font sys.Font | nil
----@param size number
----@param rgb sys.Rgb
-function sys.Surf:text(text, x, y, font, size, rgb) end
+---@param font? sys.Font Defaults to internal font or if font isn't ready.
+---@param rgb? sys.Rgb Defaults to white.
+---@param scale? number Defaults to 1.
+function sys.Surf:text(text, x, y, font, rgb, scale) end
 
 ---===
