@@ -1,5 +1,7 @@
+use std::cell::RefCell;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
 use macroquad::prelude::*;
 use mlua::{AnyUserData, Lua, Result, StdLib};
@@ -75,6 +77,51 @@ async fn run_loop(script: mlua::Table, hub: AnyUserData) -> Result<()> {
     }
 }
 
+#[derive(Clone, Default)]
+struct Font {
+    err: Arc<Mutex<Option<String>>>,
+    font: Arc<Mutex<Option<macroquad::text::Font>>>,
+    ready_font: RefCell<Option<macroquad::text::Font>>,
+}
+
+impl Font {
+    pub fn err(&self) -> Option<String> {
+        self.err.lock().unwrap().as_ref().map(|x| x.clone())
+    }
+
+    pub fn failed(&self) -> bool {
+        self.err.lock().unwrap().is_some()
+    }
+
+    pub fn with_font<R, F>(&self, f: F) -> R
+    where
+        F: FnOnce(&Option<macroquad::text::Font>) -> R,
+    {
+        if self.ready_font.borrow().is_none() && !self.failed() {
+            let font = self.font.lock().unwrap();
+            *self.ready_font.borrow_mut() = font.clone();
+        }
+        f(&*self.ready_font.borrow())
+    }
+}
+
+// impl mlua::FromLua for &Font {
+//     fn from_lua(value: mlua::Value, lua: &Lua) -> Result<Self> {
+//         value
+//             .as_userdata()
+//             .map(|ud| ud.borrow::<Self>().unwrap())
+//             .ok_or(mlua::Error::RuntimeError("".to_string()))
+//     }
+// }
+
+impl mlua::UserData for Font {
+    fn add_fields<F: mlua::UserDataFields<Self>>(fields: &mut F) {
+        fields.add_field_method_get("error", |_, this| Ok(this.err()));
+        fields.add_field_method_get("failed", |_, this| Ok(this.err.lock().unwrap().is_some()));
+        fields.add_field_method_get("ready", |_, this| Ok(this.font.lock().unwrap().is_some()));
+    }
+}
+
 #[derive(Default)]
 struct Hub {
     pub frame_time: f32,
@@ -91,27 +138,26 @@ impl mlua::UserData for Hub {
     }
 
     fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
-        methods.add_async_method("font", |_lua, this, resource: mlua::String| async move {
+        methods.add_method("font", |lua, this, resource: mlua::String| {
             let path = get_safe_path(&this.path, &resource.to_str().unwrap())
                 .map_err(|e| mlua::Error::RuntimeError(e))?;
+            let font_handle = Font::default();
+            let font_clone = font_handle.clone();
             macroquad::experimental::coroutines::start_coroutine(async move {
                 let path_str = path.to_string_lossy();
                 match load_ttf_font(&path_str).await {
-                    Ok(font) => println!("Loaded: {path_str}"),
-                    Err(err) => println!("Failed {path_str}: {err:?}"),
+                    Ok(font) => {
+                        *font_clone.font.lock().unwrap() = Some(font);
+                    }
+                    Err(err) => {
+                        *font_clone.err.lock().unwrap() = Some(err.to_string());
+                    }
                 }
-                // .await
-                // .map_err(|e| mlua::Error::RuntimeError(format!("Failed to load font: {:?}", e)))?;
             });
-            // Ok(path)
-            // TODO Return some handle or something???
-            Ok(())
+            Ok(lua.create_userdata(font_handle))
         });
     }
 }
-
-// struct MqFont(pub Font);
-// impl mlua::UserData for MqFont {}
 
 #[derive(Clone, Copy)]
 struct Surf;
@@ -131,6 +177,39 @@ impl mlua::UserData for Surf {
                 let x0 = x0.min(x1);
                 let y0 = y0.min(y1);
                 draw_rectangle(x0, y0, size_x, size_y, Color::from_hex(rgb));
+                Ok(())
+            },
+        );
+        methods.add_method(
+            "text",
+            |_lua,
+             _this,
+             (text, x, y, font, font_size, rgb): (
+                mlua::String,
+                f32,
+                f32,
+                mlua::Value,
+                u16,
+                u32,
+            )| {
+                let text = text.to_str()?;
+                let text_params = TextParams {
+                    font_size,
+                    color: Color::from_hex(rgb),
+                    ..Default::default()
+                };
+                if let Some(font) = font.as_userdata() {
+                    let font = font.borrow::<Font>()?;
+                    font.with_font(|font| {
+                        let text_params = TextParams {
+                            font: font.as_ref(),
+                            ..text_params
+                        };
+                        draw_text_ex(&text, x, y, text_params)
+                    });
+                } else {
+                    draw_text_ex(&text, x, y, text_params);
+                }
                 Ok(())
             },
         );

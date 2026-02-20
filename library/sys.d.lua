@@ -8,6 +8,10 @@ sys = {}
 ---===
 --- Font handle
 ---@class sys.Font
+--- Whether the font is properly loaded
+---@field ready boolean
+--- The error message if any
+---@field error? string
 sys.Font = {}
 ---===
 
@@ -60,4 +64,15 @@ function sys.Surf:clear(rgb) end
 ---@param y1 number
 ---@param rgb sys.Rgb
 function sys.Surf:rect(x0, y0, x1, y1, rgb) end
+
+--- Fill a rectangle
+---@param text string
+---@param x number
+---@param y number
+--- TODO Put all the below in some TextOptions table?
+---@param font sys.Font | nil
+---@param size number
+---@param rgb sys.Rgb
+function sys.Surf:text(text, x, y, font, size, rgb) end
+
 ---===
