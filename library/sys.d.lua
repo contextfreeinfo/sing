@@ -20,10 +20,11 @@ sys.Font = {}
 --- Measure sizes for the given text.
 --- TODO Throw if not ready?
 ---@param text string
----@return number size_x
----@return number size_y
----@return number baseline_y
+---@return number sizeX
+---@return number sizeY
+---@return number baselineY
 function sys.Font:measure(text) end
+
 ---===
 
 
@@ -44,12 +45,16 @@ sys.FontFace = {}
 ---@param size number
 ---@return sys.Font
 function sys.FontFace:font(size) end
+
 ---===
 
 
 ---===
 --- Access to system input, output, and state.
 ---@class sys.Hub
+---@field frameTime number Delta time for the current frame.
+---@field screenSizeX integer Screen width in pixels.
+---@field screenSizeY integer Screen height in pixels.
 sys.Hub = {}
 
 --- Load a font from a relative path.
@@ -58,17 +63,6 @@ sys.Hub = {}
 ---@param path string
 ---@return sys.FontFace
 function sys.Hub:font_face(path) end
-
---- Define a font face and scale.
-
---- The delta time for the current frame.
-sys.Hub.frame_time = 0
-
---- Screen width in pixels.
-sys.Hub.screen_size_x = 0
-
---- Screen height in pixels.
-sys.Hub.screen_size_y = 0
 ---===
 
 

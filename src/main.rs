@@ -54,6 +54,7 @@ fn main() -> Result<()> {
 async fn run_loop(lua: Lua, script: mlua::Table, hub: AnyUserData) -> Result<()> {
     let init: Option<mlua::Function> = script.get("init").ok();
     // The init function itself should be sync.
+    // TODO Wait to call init until we see size stabilize.
     let state = init
         .map(|init| init.call::<mlua::Value>(hub.clone()))
         .transpose()?;
@@ -154,9 +155,9 @@ struct Hub {
 
 impl mlua::UserData for Hub {
     fn add_fields<F: mlua::UserDataFields<Self>>(fields: &mut F) {
-        fields.add_field_method_get("frame_time", |_, this| Ok(this.frame_time));
-        fields.add_field_method_get("screen_size_x", |_, this| Ok(this.screen_size_x));
-        fields.add_field_method_get("screen_size_y", |_, this| Ok(this.screen_size_y));
+        fields.add_field_method_get("frameTime", |_, this| Ok(this.frame_time));
+        fields.add_field_method_get("screenSizeX", |_, this| Ok(this.screen_size_x));
+        fields.add_field_method_get("screenSizeY", |_, this| Ok(this.screen_size_y));
     }
 
     fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {

@@ -5,29 +5,30 @@ local mod = {}
 -- local a = coroutine.running()
 
 ---@class Sprite
----@field dir_x number
----@field dir_y number
----@field pos_x number
----@field pos_y number
----@field size_x number
----@field size_y number
+---@field dirX number
+---@field dirY number
+---@field posX number
+---@field posY number
+---@field sizeX number
+---@field sizeY number
 ---@field speed number
 
 ---@class State
 ---@field sprites Sprite[]
 
+---@param hub sys.Hub
 ---@return State
-function mod.init()
+function mod.init(hub)
     local sprites = {}
     for _ = 1, 1000 do
         table.insert(sprites, {
-            dir_x  = math.random(-1, 1),   -- TODO Just -1 or 1
-            dir_y  = math.random(-1, 1),
-            pos_x  = math.random(0, 1920), -- TODO Use hub for size?
-            pos_y  = math.random(0, 1080),
-            size_x = 40,
-            size_y = 40,
-            speed  = math.random(100, 500),
+            dirX  = math.random(-1, 1),
+            dirY  = math.random(-1, 1),
+            posX  = math.random(0, 1920), -- hub.screenSizeX),
+            posY  = math.random(0, 1080), -- hub.screenSizeY),
+            sizeX = 40,
+            sizeY = 40,
+            speed = math.random(100, 500),
         })
     end
     return {
@@ -40,21 +41,21 @@ end
 function mod.update(hub, state)
     for _, sprite in ipairs(state.sprites) do
         -- Move
-        local move = hub.frame_time * sprite.speed
-        sprite.pos_x = sprite.pos_x + move * sprite.dir_x
-        sprite.pos_y = sprite.pos_y + move * sprite.dir_y
+        local move = hub.frameTime * sprite.speed
+        sprite.posX = sprite.posX + move * sprite.dirX
+        sprite.posY = sprite.posY + move * sprite.dirY
         -- Check collision
-        local x1 = sprite.pos_x + sprite.size_x
-        local y1 = sprite.pos_y + sprite.size_y
-        if sprite.pos_x < 0 then
-            sprite.dir_x = 1
-        elseif x1 > hub.screen_size_x then
-            sprite.dir_x = -1
+        local x1 = sprite.posX + sprite.sizeX
+        local y1 = sprite.posY + sprite.sizeY
+        if sprite.posX < 0 then
+            sprite.dirX = 1
+        elseif x1 > hub.screenSizeX then
+            sprite.dirX = -1
         end
-        if sprite.pos_y < 0 then
-            sprite.dir_y = 1
-        elseif y1 > hub.screen_size_y then
-            sprite.dir_y = -1
+        if sprite.posY < 0 then
+            sprite.dirY = 1
+        elseif y1 > hub.screenSizeY then
+            sprite.dirY = -1
         end
     end
 end
@@ -64,9 +65,9 @@ end
 function mod.draw(surf, state)
     surf:clear(0x104060)
     for _, sprite in ipairs(state.sprites) do
-        local x1 = sprite.pos_x + sprite.size_x
-        local y1 = sprite.pos_y + sprite.size_y
-        surf:rect(sprite.pos_x, sprite.pos_y, x1, y1, 0x205080)
+        local x1 = sprite.posX + sprite.sizeX
+        local y1 = sprite.posY + sprite.sizeY
+        surf:rect(sprite.posX, sprite.posY, x1, y1, 0x205080)
     end
 end
 
