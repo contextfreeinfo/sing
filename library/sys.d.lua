@@ -17,8 +17,7 @@ sys = {}
 ---@field size integer
 sys.Font = {}
 
---- Measure sizes for the given text.
---- TODO Throw if not ready?
+--- Measure sizes for the given text. Measures the default font if not ready.
 ---@param text string
 ---@return number sizeX
 ---@return number sizeY
@@ -63,6 +62,7 @@ sys.Hub = {}
 ---@param path string
 ---@return sys.FontFace
 function sys.Hub:font_face(path) end
+
 ---===
 
 

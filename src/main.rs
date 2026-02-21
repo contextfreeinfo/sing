@@ -104,6 +104,16 @@ impl mlua::UserData for Font {
         fields.add_field_method_get("face", |_, this| Ok(this.face.clone()));
         fields.add_field_method_get("size", |_, this| Ok(this.size));
     }
+
+    fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
+        methods.add_method("measure", |_lua, this, text: mlua::String| {
+            this.face_internal.with_internal(|face| {
+                let text = &text.to_str().unwrap();
+                let measure = measure_text(text, face.as_ref(), this.size, 1.0);
+                Ok((measure.width, measure.height, measure.offset_y))
+            })
+        });
+    }
 }
 
 #[derive(Clone, Default)]
@@ -178,8 +188,8 @@ impl mlua::UserData for Hub {
     }
 
     fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
-        methods.add_method("font_face", |lua, this, resource: mlua::String| {
-            let path = get_safe_path(&this.path, &resource.to_str().unwrap())
+        methods.add_method("font_face", |lua, this, path: mlua::String| {
+            let path = get_safe_path(&this.path, &path.to_str().unwrap())
                 .map_err(mlua::Error::RuntimeError)?;
             let font_handle = FontFace::default();
             let font_clone = font_handle.clone();
@@ -226,26 +236,20 @@ impl mlua::UserData for Surf {
                 let text = text.to_str()?;
                 let mut text_params = TextParams {
                     color: Color::from_hex(rgb.unwrap_or(0xffffff)),
-                    font_size: 40,
+                    font_size: DEFAULT_FONT_SIZE,
                     ..Default::default()
                 };
                 if let Some(font) = font.as_userdata() {
                     let font = font.borrow::<Font>()?;
                     text_params.font_size = font.size;
-                    let mut done = false;
                     font.face_internal.with_internal(|face| {
                         let text_params = TextParams {
                             font: face.as_ref(),
                             ..text_params
                         };
                         draw_text_ex(&text, x, y, text_params);
-                        done = true;
                     });
-                    if done {
-                        return Ok(());
-                    }
                 }
-                draw_text_ex(&text, x, y, text_params);
                 Ok(())
             },
         );
@@ -286,3 +290,5 @@ fn get_safe_path(base_path: &str, resource: &str) -> std::result::Result<PathBuf
         Err("Directory traversal attempt detected".to_string())
     }
 }
+
+const DEFAULT_FONT_SIZE: u16 = 40;
