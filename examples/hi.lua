@@ -16,6 +16,7 @@ end
 function mod.draw(surf, state)
     if state.font.face.ready then
         surf:text("Hi there!", 300, 400, state.font, 0xffaa00)
+        -- surf:text("Hi there!", 300, 400)
     end
 end
 

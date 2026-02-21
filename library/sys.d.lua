@@ -13,6 +13,8 @@ sys = {}
 ---@class sys.Font
 --- The face this font comes from.
 ---@field face sys.FontFace
+--- The face this font comes from.
+---@field size integer
 sys.Font = {}
 
 --- Measure sizes for the given text.
@@ -79,7 +81,7 @@ sys.Hub.screen_size_y = 0
 sys.Surf = {}
 
 --- Clear the screen with a specific color.
----@param rgb sys.Rgb
+---@param rgb? sys.Rgb Defaults to black.
 function sys.Surf:clear(rgb) end
 
 --- Fill a rectangle.
@@ -94,10 +96,9 @@ function sys.Surf:rect(x0, y0, x1, y1, rgb) end
 ---@param text string
 ---@param x number
 ---@param y number
---- TODO Put all the below in some TextOptions table?
----@param font? sys.Font Defaults to internal font or if font isn't ready.
+---@param font? sys.Font Defaults to internal font at size 40.
 ---@param rgb? sys.Rgb Defaults to white.
----@param scale? number Defaults to 1.
-function sys.Surf:text(text, x, y, font, rgb, scale) end
+--- TODO Some size that auto applies scale?
+function sys.Surf:text(text, x, y, font, rgb) end
 
 ---===

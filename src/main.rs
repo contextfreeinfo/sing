@@ -45,13 +45,13 @@ fn main() -> Result<()> {
         },
         async move {
             // TODO Better error handling.
-            run_loop(script, hub).await.unwrap();
+            run_loop(lua, script, hub).await.unwrap();
         },
     );
     Ok(())
 }
 
-async fn run_loop(script: mlua::Table, hub: AnyUserData) -> Result<()> {
+async fn run_loop(lua: Lua, script: mlua::Table, hub: AnyUserData) -> Result<()> {
     let init: Option<mlua::Function> = script.get("init").ok();
     // The init function itself should be sync.
     let state = init
@@ -61,6 +61,11 @@ async fn run_loop(script: mlua::Table, hub: AnyUserData) -> Result<()> {
     let draw: Option<mlua::Function> = script.get("draw").ok();
     let surf = Surf;
     loop {
+        if is_quit_requested() {
+            // Clean up lua first.
+            drop(lua);
+            break Ok(());
+        }
         hub.borrow_mut::<Hub>().map(|mut hub| {
             hub.frame_time = get_frame_time();
             hub.screen_size_x = screen_width();
@@ -77,14 +82,28 @@ async fn run_loop(script: mlua::Table, hub: AnyUserData) -> Result<()> {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 struct Font {
-    err: Arc<Mutex<Option<String>>>,
-    font: Arc<Mutex<Option<macroquad::text::Font>>>,
-    ready_font: RefCell<Option<macroquad::text::Font>>,
+    face: mlua::AnyUserData,
+    face_internal: FontFace,
+    size: u16,
 }
 
-impl Font {
+impl mlua::UserData for Font {
+    fn add_fields<F: mlua::UserDataFields<Self>>(fields: &mut F) {
+        fields.add_field_method_get("face", |_, this| Ok(this.face.clone()));
+        fields.add_field_method_get("size", |_, this| Ok(this.size));
+    }
+}
+
+#[derive(Clone, Default)]
+struct FontFace {
+    err: Arc<Mutex<Option<String>>>,
+    internal: Arc<Mutex<Option<macroquad::text::Font>>>,
+    ready_internal: RefCell<Option<macroquad::text::Font>>,
+}
+
+impl FontFace {
     pub fn err(&self) -> Option<String> {
         self.err.lock().unwrap().as_ref().map(|x| x.clone())
     }
@@ -93,32 +112,35 @@ impl Font {
         self.err.lock().unwrap().is_some()
     }
 
-    pub fn with_font<R, F>(&self, f: F) -> R
+    pub fn with_internal<R, F>(&self, f: F) -> R
     where
         F: FnOnce(&Option<macroquad::text::Font>) -> R,
     {
-        if self.ready_font.borrow().is_none() && !self.failed() {
-            let font = self.font.lock().unwrap();
-            *self.ready_font.borrow_mut() = font.clone();
+        if self.ready_internal.borrow().is_none() && !self.failed() {
+            let font = self.internal.lock().unwrap();
+            *self.ready_internal.borrow_mut() = font.clone();
         }
-        f(&*self.ready_font.borrow())
+        f(&self.ready_internal.borrow())
     }
 }
 
-// impl mlua::FromLua for &Font {
-//     fn from_lua(value: mlua::Value, lua: &Lua) -> Result<Self> {
-//         value
-//             .as_userdata()
-//             .map(|ud| ud.borrow::<Self>().unwrap())
-//             .ok_or(mlua::Error::RuntimeError("".to_string()))
-//     }
-// }
-
-impl mlua::UserData for Font {
+impl mlua::UserData for FontFace {
     fn add_fields<F: mlua::UserDataFields<Self>>(fields: &mut F) {
         fields.add_field_method_get("error", |_, this| Ok(this.err()));
         fields.add_field_method_get("failed", |_, this| Ok(this.err.lock().unwrap().is_some()));
-        fields.add_field_method_get("ready", |_, this| Ok(this.font.lock().unwrap().is_some()));
+        fields.add_field_method_get("ready", |_, this| {
+            Ok(this.internal.lock().unwrap().is_some())
+        });
+    }
+
+    fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
+        methods.add_function("font", |_lua, (this, size): (mlua::AnyUserData, u16)| {
+            Ok(Font {
+                face: this.clone(),
+                face_internal: this.borrow::<FontFace>()?.clone(),
+                size,
+            })
+        });
     }
 }
 
@@ -138,16 +160,16 @@ impl mlua::UserData for Hub {
     }
 
     fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
-        methods.add_method("font", |lua, this, resource: mlua::String| {
+        methods.add_method("font_face", |lua, this, resource: mlua::String| {
             let path = get_safe_path(&this.path, &resource.to_str().unwrap())
-                .map_err(|e| mlua::Error::RuntimeError(e))?;
-            let font_handle = Font::default();
+                .map_err(mlua::Error::RuntimeError)?;
+            let font_handle = FontFace::default();
             let font_clone = font_handle.clone();
             macroquad::experimental::coroutines::start_coroutine(async move {
                 let path_str = path.to_string_lossy();
                 match load_ttf_font(&path_str).await {
                     Ok(font) => {
-                        *font_clone.font.lock().unwrap() = Some(font);
+                        *font_clone.internal.lock().unwrap() = Some(font);
                     }
                     Err(err) => {
                         *font_clone.err.lock().unwrap() = Some(err.to_string());
@@ -164,9 +186,9 @@ struct Surf;
 
 impl mlua::UserData for Surf {
     fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
-        methods.add_method("clear", |_lua, _this, rgb: u32| {
+        methods.add_method("clear", |_lua, _this, rgb: Option<u32>| {
             // TODO Get target from `this`.
-            clear_background(Color::from_hex(rgb));
+            clear_background(Color::from_hex(rgb.unwrap_or(0)));
             Ok(())
         });
         methods.add_method(
@@ -182,34 +204,30 @@ impl mlua::UserData for Surf {
         );
         methods.add_method(
             "text",
-            |_lua,
-             _this,
-             (text, x, y, font, font_size, rgb): (
-                mlua::String,
-                f32,
-                f32,
-                mlua::Value,
-                u16,
-                u32,
-            )| {
+            |_lua, _this, (text, x, y, font, rgb): (mlua::String, f32, f32, mlua::Value, Option<u32>)| {
                 let text = text.to_str()?;
-                let text_params = TextParams {
-                    font_size,
-                    color: Color::from_hex(rgb),
+                let mut text_params = TextParams {
+                    color: Color::from_hex(rgb.unwrap_or(0xffffff)),
+                    font_size: 40,
                     ..Default::default()
                 };
                 if let Some(font) = font.as_userdata() {
                     let font = font.borrow::<Font>()?;
-                    font.with_font(|font| {
+                    text_params.font_size = font.size;
+                    let mut done = false;
+                    font.face_internal.with_internal(|face| {
                         let text_params = TextParams {
-                            font: font.as_ref(),
+                            font: face.as_ref(),
                             ..text_params
                         };
-                        draw_text_ex(&text, x, y, text_params)
+                        draw_text_ex(&text, x, y, text_params);
+                        done = true;
                     });
-                } else {
-                    draw_text_ex(&text, x, y, text_params);
+                    if done {
+                        return Ok(());
+                    }
                 }
+                draw_text_ex(&text, x, y, text_params);
                 Ok(())
             },
         );
