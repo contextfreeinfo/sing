@@ -40,6 +40,8 @@ fn main() -> Result<()> {
                 // linux_wm_class: "...",
                 ..Default::default()
             },
+            // window_height: 301, // TODO Can we use this to detect size ready?
+            // window_width: 301,
             window_title: "Sing".into(),
             ..Default::default()
         },
@@ -52,6 +54,15 @@ fn main() -> Result<()> {
 }
 
 async fn run_loop(lua: Lua, script: mlua::Table, hub: AnyUserData) -> Result<()> {
+    // Burn some frames in hopes we get screen size correct.
+    for _ in 0..3 {
+        hub.borrow_mut::<Hub>().map(|mut hub| {
+            hub.update();
+            // println!("size: {} {}", hub.screen_size_x, hub.screen_size_y);
+        })?;
+        next_frame().await
+    }
+    // Now get going.
     let init: Option<mlua::Function> = script.get("init").ok();
     // The init function itself should be sync.
     // TODO Wait to call init until we see size stabilize.
@@ -68,9 +79,7 @@ async fn run_loop(lua: Lua, script: mlua::Table, hub: AnyUserData) -> Result<()>
             break Ok(());
         }
         hub.borrow_mut::<Hub>().map(|mut hub| {
-            hub.frame_time = get_frame_time();
-            hub.screen_size_x = screen_width();
-            hub.screen_size_y = screen_height();
+            hub.update();
         })?;
         if let Some(update) = &update {
             update.call::<()>((hub.clone(), state.clone()))?;
@@ -151,6 +160,14 @@ struct Hub {
     pub path: String,
     pub screen_size_x: f32,
     pub screen_size_y: f32,
+}
+
+impl Hub {
+    pub fn update(&mut self) {
+        self.frame_time = get_frame_time();
+        self.screen_size_x = screen_width();
+        self.screen_size_y = screen_height();
+    }
 }
 
 impl mlua::UserData for Hub {

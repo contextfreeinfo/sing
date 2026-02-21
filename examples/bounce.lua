@@ -24,8 +24,8 @@ function mod.init(hub)
         table.insert(sprites, {
             dirX  = math.random(-1, 1),
             dirY  = math.random(-1, 1),
-            posX  = math.random(0, 1920), -- hub.screenSizeX),
-            posY  = math.random(0, 1080), -- hub.screenSizeY),
+            posX  = math.random(0, hub.screenSizeX),
+            posY  = math.random(0, hub.screenSizeY),
             sizeX = 40,
             sizeY = 40,
             speed = math.random(100, 500),
