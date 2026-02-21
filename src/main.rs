@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use std::fs;
+use std::{env, fs};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
@@ -87,7 +87,7 @@ async fn run_loop(lua: Lua, script: mlua::Table, hub: AnyUserData) -> Result<()>
         if let Some(draw) = &draw {
             draw.call::<()>((surf, state.clone()))?;
         }
-        draw_text(&format!("FPS: {}", get_fps()), 200.0, 150.0, 80.0, YELLOW);
+        // draw_text(&format!("FPS: {}", get_fps()), 200.0, 150.0, 80.0, YELLOW);
         next_frame().await
     }
 }
@@ -166,6 +166,7 @@ impl mlua::UserData for FontFace {
 
 #[derive(Default)]
 struct Hub {
+    pub fps: f32,
     pub frame_time: f32,
     pub path: String,
     pub screen_size_x: f32,
@@ -174,6 +175,7 @@ struct Hub {
 
 impl Hub {
     pub fn update(&mut self) {
+        self.fps = get_fps() as f32;
         self.frame_time = get_frame_time();
         self.screen_size_x = screen_width();
         self.screen_size_y = screen_height();
@@ -182,6 +184,7 @@ impl Hub {
 
 impl mlua::UserData for Hub {
     fn add_fields<F: mlua::UserDataFields<Self>>(fields: &mut F) {
+        fields.add_field_method_get("fps", |_, this| Ok(this.fps));
         fields.add_field_method_get("frameTime", |_, this| Ok(this.frame_time));
         fields.add_field_method_get("screenSizeX", |_, this| Ok(this.screen_size_x));
         fields.add_field_method_get("screenSizeY", |_, this| Ok(this.screen_size_y));
@@ -260,7 +263,11 @@ impl mlua::UserData for Surf {
 /// within the base path's parent directory.
 /// TODO Require resource to start with "./"?
 fn get_safe_path(base_path: &str, resource: &str) -> std::result::Result<PathBuf, String> {
-    let base = Path::new(base_path);
+    let mut base = PathBuf::from(base_path);
+    if base.is_relative() {
+        let cwd = env::current_dir().map_err(|e| e.to_string())?;
+        base = cwd.join(base);
+    }
     // Get the directory we are "locked" into
     let jail_dir = if base.is_dir() {
         base.to_path_buf()

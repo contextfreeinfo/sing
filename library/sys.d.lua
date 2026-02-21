@@ -51,6 +51,7 @@ function sys.FontFace:font(size) end
 ---===
 --- Access to system input, output, and state.
 ---@class sys.Hub
+---@field fps number Estimated frames per second.
 ---@field frameTime number Delta time for the current frame.
 ---@field screenSizeX integer Screen width in pixels.
 ---@field screenSizeY integer Screen height in pixels.
