@@ -13,11 +13,12 @@ local mod = {}
 ---@field sizeY number
 ---@field speed number
 
----@class State
+---@class bounce.State
+---@field fps number
 ---@field sprites Sprite[]
 
 ---@param hub sys.Hub
----@return State
+---@return bounce.State
 function mod.init(hub)
     local sprites = {}
     for _ = 1, 1000 do
@@ -32,13 +33,15 @@ function mod.init(hub)
         })
     end
     return {
+        fps = 0,
         sprites = sprites
     }
 end
 
 ---@param hub sys.Hub
----@param state State
+---@param state bounce.State
 function mod.update(hub, state)
+    state.fps = hub.fps
     for _, sprite in ipairs(state.sprites) do
         -- Move
         local move = hub.frameTime * sprite.speed
@@ -61,7 +64,7 @@ function mod.update(hub, state)
 end
 
 ---@param surf sys.Surf
----@param state State
+---@param state bounce.State
 function mod.draw(surf, state)
     surf:clear(0x104060)
     for _, sprite in ipairs(state.sprites) do
@@ -69,6 +72,7 @@ function mod.draw(surf, state)
         local y1 = sprite.posY + sprite.sizeY
         surf:rect(sprite.posX, sprite.posY, x1, y1, 0x205080)
     end
+    surf:text(string.format("FPS: %d", state.fps), 200, 200)
 end
 
 return mod

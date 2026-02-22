@@ -1,6 +1,6 @@
 local mod = {}
 
----@class State
+---@class hi.State
 ---@field font sys.Font
 ---@field messages string[]
 ---@field drawX number
@@ -9,7 +9,7 @@ local mod = {}
 ---@field time number
 
 ---@param hub sys.Hub
----@return State
+---@return hi.State
 function mod.init(hub)
     return {
         font = hub:font_face("./font/Chewy-Regular.ttf"):font(150),
@@ -23,7 +23,7 @@ function mod.init(hub)
 end
 
 ---@param hub sys.Hub
----@param state State
+---@param state hi.State
 function mod.update(hub, state)
     -- Plan text and get sizes.
     local message = "Hi there!"
@@ -40,7 +40,7 @@ function mod.update(hub, state)
 end
 
 ---@param surf sys.Surf
----@param state State
+---@param state hi.State
 function mod.draw(surf, state)
     if state.font.face.ready then
         -- Got a font, so plan drawing.

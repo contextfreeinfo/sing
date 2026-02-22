@@ -1,7 +1,7 @@
 use std::cell::RefCell;
-use std::{env, fs};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+use std::{env, fs};
 
 use macroquad::prelude::*;
 use mlua::{AnyUserData, Lua, Result, StdLib};
@@ -21,6 +21,8 @@ fn main() -> Result<()> {
         mlua::LuaOptions::default(),
     )?;
     lua.sandbox(true)?;
+    // TODO Customize require? Needs safer??? Use it for finding resources???
+    lua.create_require_function(mlua::TextRequirer::new())?;
     let sys = lua.create_table()?;
     lua.globals().set("sys", sys)?;
 
@@ -252,6 +254,8 @@ impl mlua::UserData for Surf {
                         };
                         draw_text_ex(&text, x, y, text_params);
                     });
+                } else {
+                    draw_text_ex(&text, x, y, text_params);
                 }
                 Ok(())
             },
