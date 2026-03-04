@@ -6,6 +6,15 @@
 sys = {}
 ---===
 
+---===
+---@class sys.Audio
+sys.Audio = {}
+
+--- Plays the given sound.
+---@param sound sys.Sound
+function sys.Audio:play(sound) end
+
+---===
 
 ---===
 --- Sized font, where each costs vram. Limit how many you make as well as the
@@ -51,6 +60,7 @@ function sys.FontFace:font(size) end
 ---===
 --- Access to system input, output, and state.
 ---@class sys.Hub
+---@field audio sys.Audio
 ---@field fps number Estimated frames per second.
 ---@field frameTime number Delta time for the current frame.
 ---@field screenSizeX integer Screen width in pixels.
@@ -64,11 +74,24 @@ sys.Hub = {}
 ---@return sys.FontFace
 function sys.Hub:font_face(path) end
 
+--- Load a sound from a relative path.
+---@param path string
+---@return sys.Sound
+function sys.Hub:sound(path) end
+
 ---===
 
 
 ---@alias sys.Rgb integer # A 24-bit RGB color (e.g., 0xFF0000)
 
+---===
+---@class sys.Sound
+--- Whether the sound is properly loaded.
+---@field ready boolean
+--- The error message if any.
+---@field error? string
+
+---===
 
 ---===
 --- Surface used for drawing graphics.

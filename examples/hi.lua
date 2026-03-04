@@ -6,17 +6,19 @@ local mod = {}
 ---@field drawX number
 ---@field drawY number
 ---@field stepY number
+---@field sound sys.Sound
 ---@field time number
 
 ---@param hub sys.Hub
 ---@return hi.State
 function mod.init(hub)
     return {
-        font = hub:font_face("./font/Chewy-Regular.ttf"):font(150),
+        font = hub:font_face("./assets/Chewy-Regular.ttf"):font(150),
         -- Placeholders.
         messages = {},
         drawX = 0,
         drawY = 0,
+        -- sound = hub:sound("./assets/ukelele-dolow.ogg"),
         stepY = 0,
         time = 0,
     }
@@ -37,6 +39,10 @@ function mod.update(hub, state)
     state.stepY = sizeY * 1.5
     state.drawY = (hub.screenSizeY - (sizeY + state.stepY)) / 2 + baselineY
     state.time = state.time + hub.frameTime
+    -- if state.font.face.ready and state.sound.ready then
+    --     -- TODO Pan back and forth playing on an interval.
+    --     hub.audio:play(state.sound)
+    -- end
 end
 
 ---@param surf sys.Surf
