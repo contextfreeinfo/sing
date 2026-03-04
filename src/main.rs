@@ -6,6 +6,8 @@ use std::{env, fs};
 use macroquad::prelude::*;
 use mlua::{AnyUserData, Lua, Result, StdLib};
 
+mod sound;
+
 #[derive(argh::FromArgs)]
 /// Run a Sing program.
 struct Args {
@@ -56,6 +58,7 @@ fn main() -> Result<()> {
 }
 
 async fn run_loop(lua: Lua, script: mlua::Table, hub: AnyUserData) -> Result<()> {
+    let _audio = sound::play_sound().unwrap();
     // Burn some frames in hopes we get screen size correct.
     for _ in 0..3 {
         hub.borrow_mut::<Hub>().map(|mut hub| {
