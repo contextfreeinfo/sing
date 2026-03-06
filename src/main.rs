@@ -6,8 +6,6 @@ use std::{env, fs};
 use macroquad::prelude::*;
 use mlua::{AnyUserData, Lua, Result, StdLib};
 
-mod sound;
-
 #[derive(argh::FromArgs)]
 /// Run a Sing program.
 struct Args {
@@ -31,6 +29,13 @@ fn main() -> Result<()> {
     let script = fs::read_to_string(&args.script)?;
     let script: mlua::Table = lua.load(script).eval()?;
     let hub = lua.create_userdata(Hub {
+        audio: Audio {
+            manager: kira::AudioManager::<kira::DefaultBackend>::new(
+                kira::AudioManagerSettings::default(),
+            )
+            .map(|x| Arc::new(Mutex::new(x)))
+            .ok(),
+        },
         path: args.script,
         ..Default::default()
     })?;
@@ -58,7 +63,7 @@ fn main() -> Result<()> {
 }
 
 async fn run_loop(lua: Lua, script: mlua::Table, hub: AnyUserData) -> Result<()> {
-    let _audio = sound::play_sound().unwrap();
+    // let _audio = sound::play_sound().unwrap();
     // Burn some frames in hopes we get screen size correct.
     for _ in 0..3 {
         hub.borrow_mut::<Hub>().map(|mut hub| {
@@ -151,8 +156,8 @@ impl FontFace {
 
 impl mlua::UserData for FontFace {
     fn add_fields<F: mlua::UserDataFields<Self>>(fields: &mut F) {
-        fields.add_field_method_get("error", |_, this| Ok(this.err()));
         fields.add_field_method_get("failed", |_, this| Ok(this.err.lock().unwrap().is_some()));
+        fields.add_field_method_get("error", |_, this| Ok(this.err()));
         fields.add_field_method_get("ready", |_, this| {
             Ok(this.internal.lock().unwrap().is_some())
         });
@@ -169,8 +174,29 @@ impl mlua::UserData for FontFace {
     }
 }
 
+#[derive(Clone, Default)]
+struct Audio {
+    pub manager: Option<Arc<Mutex<kira::AudioManager>>>,
+}
+
+impl mlua::UserData for Audio {
+    fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
+        methods.add_method("play", |_, this, (sound,): (mlua::Value,)| {
+            if let Some(sound) = sound.as_userdata() {
+                let sound = sound.borrow::<Sound>()?;
+                if let Ok(sound) = &sound.result {
+                    let manager = this.manager.as_ref().unwrap();
+                    manager.lock().unwrap().play(sound.clone()).ok();
+                }
+            }
+            Ok(())
+        });
+    }
+}
+
 #[derive(Default)]
 struct Hub {
+    audio: Audio,
     pub fps: f32,
     pub frame_time: f32,
     pub path: String,
@@ -189,6 +215,7 @@ impl Hub {
 
 impl mlua::UserData for Hub {
     fn add_fields<F: mlua::UserDataFields<Self>>(fields: &mut F) {
+        fields.add_field_method_get("audio", |_, this| Ok(this.audio.clone()));
         fields.add_field_method_get("fps", |_, this| Ok(this.fps));
         fields.add_field_method_get("frameTime", |_, this| Ok(this.frame_time));
         fields.add_field_method_get("screenSizeX", |_, this| Ok(this.screen_size_x));
@@ -214,6 +241,52 @@ impl mlua::UserData for Hub {
             });
             Ok(lua.create_userdata(font_handle))
         });
+        methods.add_method("sound", |lua, this, path: mlua::String| {
+            let path = get_safe_path(&this.path, &path.to_str().unwrap())
+                .map_err(mlua::Error::RuntimeError)?;
+            let result = kira::sound::static_sound::StaticSoundData::from_file(path)
+                .map_err(|err| err.to_string());
+            Ok(lua.create_userdata(Sound { result }))
+        });
+    }
+}
+
+#[derive(Clone)]
+struct Sound {
+    result: std::result::Result<kira::sound::static_sound::StaticSoundData, String>,
+}
+
+// impl FontFace {
+//     pub fn err(&self) -> Option<String> {
+//         self.err.lock().unwrap().as_ref().map(|x| x.clone())
+//     }
+
+//     pub fn failed(&self) -> bool {
+//         self.err.lock().unwrap().is_some()
+//     }
+
+//     pub fn with_internal<R, F>(&self, f: F) -> R
+//     where
+//         F: FnOnce(&Option<macroquad::text::Font>) -> R,
+//     {
+//         if self.ready_internal.borrow().is_none() && !self.failed() {
+//             let font = self.internal.lock().unwrap();
+//             *self.ready_internal.borrow_mut() = font.clone();
+//         }
+//         f(&self.ready_internal.borrow())
+//     }
+// }
+
+impl mlua::UserData for Sound {
+    fn add_fields<F: mlua::UserDataFields<Self>>(fields: &mut F) {
+        fields.add_field_method_get("error", |_, this| {
+            Ok(match &this.result {
+                Ok(_) => None,
+                Err(err) => Some(err.clone()),
+            })
+        });
+        fields.add_field_method_get("failed", |_, this| Ok(this.result.is_err()));
+        fields.add_field_method_get("ready", |_, this| Ok(this.result.is_ok()));
     }
 }
 

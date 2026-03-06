@@ -5,20 +5,26 @@ local mod = {}
 ---@field messages string[]
 ---@field drawX number
 ---@field drawY number
----@field stepY number
+---@field lastSoundTime number
 ---@field sound sys.Sound
+---@field soundGap number
+---@field stepY number
 ---@field time number
 
 ---@param hub sys.Hub
 ---@return hi.State
 function mod.init(hub)
+    local soundGap = 5
     return {
+        -- Resources.
         font = hub:font_face("./assets/Chewy-Regular.ttf"):font(150),
+        sound = hub:sound("./assets/ukelele-dolow.ogg"),
         -- Placeholders.
         messages = {},
         drawX = 0,
         drawY = 0,
-        -- sound = hub:sound("./assets/ukelele-dolow.ogg"),
+        lastSoundTime = -soundGap / 2,
+        soundGap = soundGap,
         stepY = 0,
         time = 0,
     }
@@ -43,6 +49,12 @@ function mod.update(hub, state)
     --     -- TODO Pan back and forth playing on an interval.
     --     hub.audio:play(state.sound)
     -- end
+    if state.sound.ready then
+        if state.time - state.lastSoundTime > state.soundGap then
+            hub.audio:play(state.sound)
+            state.lastSoundTime = state.time
+        end
+    end
 end
 
 ---@param surf sys.Surf
