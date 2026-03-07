@@ -63,7 +63,6 @@ fn main() -> Result<()> {
 }
 
 async fn run_loop(lua: Lua, script: mlua::Table, hub: AnyUserData) -> Result<()> {
-    // let _audio = sound::play_sound().unwrap();
     // Burn some frames in hopes we get screen size correct.
     for _ in 0..3 {
         hub.borrow_mut::<Hub>().map(|mut hub| {
