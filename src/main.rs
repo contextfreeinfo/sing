@@ -17,7 +17,12 @@ fn main() -> Result<()> {
     let args = argh::from_env::<Args>();
 
     let lua = Lua::new_with(
-        StdLib::BIT | StdLib::COROUTINE | StdLib::MATH | StdLib::STRING | StdLib::TABLE,
+        StdLib::BIT
+            | StdLib::COROUTINE
+            | StdLib::MATH
+            | StdLib::STRING
+            | StdLib::TABLE
+            | StdLib::UTF8,
         mlua::LuaOptions::default(),
     )?;
     lua.sandbox(true)?;
