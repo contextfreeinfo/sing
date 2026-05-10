@@ -84,6 +84,10 @@ function sys.Hub:keyPressed(key) end
 ---@return sys.Sound
 function sys.Hub:sound(path) end
 
+--- Typed text, usually just a single character.
+---@return string
+function sys.Hub:text() end
+
 ---===
 
 

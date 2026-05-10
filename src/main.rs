@@ -206,6 +206,7 @@ struct Hub {
     pub path: String,
     pub screen_size_x: f32,
     pub screen_size_y: f32,
+    pub text: String,
 }
 
 impl Hub {
@@ -214,6 +215,10 @@ impl Hub {
         self.frame_time = get_frame_time();
         self.screen_size_x = screen_width();
         self.screen_size_y = screen_height();
+        self.text.clear();
+        while let Some(ch) = get_char_pressed() {
+            self.text.push(ch);
+        }
     }
 }
 
@@ -262,6 +267,9 @@ impl mlua::UserData for Hub {
             let result = kira::sound::static_sound::StaticSoundData::from_file(path)
                 .map_err(|err| err.to_string());
             Ok(lua.create_userdata(Sound { result }))
+        });
+        methods.add_method("text", |_, this, ()| {
+            Ok(this.text.clone())
         });
     }
 }
