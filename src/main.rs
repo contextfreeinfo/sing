@@ -227,7 +227,7 @@ impl mlua::UserData for Hub {
     }
 
     fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
-        methods.add_method("font_face", |lua, this, path: mlua::String| {
+        methods.add_method("fontFace", |lua, this, path: mlua::String| {
             let path = get_safe_path(&this.path, &path.to_str().unwrap())
                 .map_err(mlua::Error::RuntimeError)?;
             let font_handle = FontFace::default();
@@ -244,6 +244,17 @@ impl mlua::UserData for Hub {
                 }
             });
             Ok(lua.create_userdata(font_handle))
+        });
+        methods.add_method("keyPressed", |_, _, key: mlua::String| {
+            let key = key.to_str().unwrap();
+            let key_code = match key.as_ref()  {
+                "Down" => KeyCode::Down,
+                "Left" => KeyCode::Left,
+                "Right" => KeyCode::Right,
+                "Up" => KeyCode::Up,
+                _ => return Ok(false)
+            };
+            Ok(is_key_pressed(key_code))
         });
         methods.add_method("sound", |lua, this, path: mlua::String| {
             let path = get_safe_path(&this.path, &path.to_str().unwrap())

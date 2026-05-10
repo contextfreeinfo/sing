@@ -17,7 +17,7 @@ function mod.init(hub)
     local soundGap = 5
     return {
         -- Resources.
-        font = hub:font_face("./assets/Chewy-Regular.ttf"):font(150),
+        font = hub:fontFace("./assets/Chewy-Regular.ttf"):font(150),
         sound = hub:sound("./assets/ukelele-dolow.ogg"),
         -- Placeholders.
         messages = {},

@@ -72,7 +72,12 @@ sys.Hub = {}
 --- TODO Size ratios for different faces in a multiface?
 ---@param path string
 ---@return sys.FontFace
-function sys.Hub:font_face(path) end
+function sys.Hub:fontFace(path) end
+
+--- See if a key was just pressed during the latest update.
+--- @param key string
+--- @return boolean
+function sys.Hub:keyPressed(key) end
 
 --- Load a sound from a relative path.
 ---@param path string
