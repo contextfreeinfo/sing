@@ -74,6 +74,13 @@ sys.Hub = {}
 ---@return sys.FontFace
 function sys.Hub:fontFace(path) end
 
+--- See if a key is currently held down.
+--- TODO Some way to get the number of ticks held down?
+--- TODO Ensure 60 tps?
+--- @param key string
+--- @return boolean
+function sys.Hub:keyDown(key) end
+
 --- See if a key was just pressed during the latest update.
 --- @param key string
 --- @return boolean

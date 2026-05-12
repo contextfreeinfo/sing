@@ -215,6 +215,7 @@ impl Hub {
         self.frame_time = get_frame_time();
         self.screen_size_x = screen_width();
         self.screen_size_y = screen_height();
+        // Get text.
         self.text.clear();
         while let Some(ch) = get_char_pressed() {
             if ch >= ' ' {
@@ -252,20 +253,15 @@ impl mlua::UserData for Hub {
             });
             Ok(lua.create_userdata(font_handle))
         });
+        methods.add_method("keyDown", |_, _, key: mlua::String| {
+            Ok(check_key_codes(key.to_str().unwrap().as_ref(), |code| {
+                is_key_down(code)
+            }))
+        });
         methods.add_method("keyPressed", |_, _, key: mlua::String| {
-            let key = key.to_str().unwrap();
-            let key_code = match key.as_ref() {
-                "Backspace" => KeyCode::Backspace,
-                "Delete" => KeyCode::Delete,
-                "Down" => KeyCode::Down,
-                "Left" => KeyCode::Left,
-                "Enter" => KeyCode::Enter,
-                "Right" => KeyCode::Right,
-                "Tab" => KeyCode::Tab,
-                "Up" => KeyCode::Up,
-                _ => return Ok(false),
-            };
-            Ok(is_key_pressed(key_code))
+            Ok(check_key_codes(key.to_str().unwrap().as_ref(), |code| {
+                is_key_pressed(code)
+            }))
         });
         methods.add_method("sound", |lua, this, path: mlua::String| {
             let path = get_safe_path(&this.path, &path.to_str().unwrap())
@@ -276,6 +272,30 @@ impl mlua::UserData for Hub {
         });
         methods.add_method("text", |_, this, ()| Ok(this.text.clone()));
     }
+}
+
+fn check_key_codes<F>(key: &str, check: F) -> bool
+where
+    F: Fn(KeyCode) -> bool,
+{
+    let key_code = match key {
+        "Backspace" => KeyCode::Backspace,
+        "Control" => return check(KeyCode::LeftControl) || check(KeyCode::RightControl),
+        "Delete" => KeyCode::Delete,
+        "Down" => KeyCode::Down,
+        "End" => KeyCode::End,
+        "Enter" => KeyCode::Enter,
+        "Home" => KeyCode::Home,
+        "Left" => KeyCode::Left,
+        "Right" => KeyCode::Right,
+        "PageDown" => KeyCode::PageDown,
+        "PageUp" => KeyCode::PageUp,
+        "Shift" => return check(KeyCode::LeftShift) || check(KeyCode::RightShift),
+        "Tab" => KeyCode::Tab,
+        "Up" => KeyCode::Up,
+        _ => return false,
+    };
+    check(key_code)
 }
 
 #[derive(Clone)]
