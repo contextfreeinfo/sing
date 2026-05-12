@@ -217,7 +217,9 @@ impl Hub {
         self.screen_size_y = screen_height();
         self.text.clear();
         while let Some(ch) = get_char_pressed() {
-            self.text.push(ch);
+            if ch >= ' ' {
+                self.text.push(ch);
+            }
         }
     }
 }
@@ -252,12 +254,16 @@ impl mlua::UserData for Hub {
         });
         methods.add_method("keyPressed", |_, _, key: mlua::String| {
             let key = key.to_str().unwrap();
-            let key_code = match key.as_ref()  {
+            let key_code = match key.as_ref() {
+                "Backspace" => KeyCode::Backspace,
+                "Delete" => KeyCode::Delete,
                 "Down" => KeyCode::Down,
                 "Left" => KeyCode::Left,
+                "Enter" => KeyCode::Enter,
                 "Right" => KeyCode::Right,
+                "Tab" => KeyCode::Tab,
                 "Up" => KeyCode::Up,
-                _ => return Ok(false)
+                _ => return Ok(false),
             };
             Ok(is_key_pressed(key_code))
         });
@@ -268,9 +274,7 @@ impl mlua::UserData for Hub {
                 .map_err(|err| err.to_string());
             Ok(lua.create_userdata(Sound { result }))
         });
-        methods.add_method("text", |_, this, ()| {
-            Ok(this.text.clone())
-        });
+        methods.add_method("text", |_, this, ()| Ok(this.text.clone()));
     }
 }
 
